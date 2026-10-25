@@ -14,6 +14,38 @@ if (window.gsap && window.ScrollTrigger) {
  window.addEventListener('load', () => requestAnimationFrame(() => ScrollTrigger.refresh()), {once: true});
 }
 
+// Pin the opening image while its type recedes into the story.
+(() => {
+ const runway=document.querySelector('.hero-runway'),hero=runway?.querySelector('.photo-hero');
+ if(!runway||!hero||!window.gsap||!window.ScrollTrigger)return;
+ gsap.matchMedia().add('(prefers-reduced-motion: no-preference) and (min-height: 600px)',()=>{
+  const header=document.querySelector('.header'),photo=hero.querySelector('.landing-photo');
+  const updatePinOffset=()=>{
+   const offset=`${header.getBoundingClientRect().height}px`;
+   if(runway.style.getPropertyValue('--hero-sticky-top')===offset)return;
+   runway.style.setProperty('--hero-sticky-top',offset);
+   ScrollTrigger.refresh();
+  };
+  document.documentElement.classList.add('hero-parallax-ready');
+  updatePinOffset();
+  const timeline=gsap.timeline({scrollTrigger:{
+   trigger:runway,start:()=>`top ${header.offsetHeight}px`,end:'bottom bottom',scrub:true
+  }});
+  timeline.to(photo,{scale:1.14,yPercent:6,ease:'none'},0)
+   .to('.landing-name, .landing-note, .landing-top, .landing-bottom, .paper-photo-note, .paper-edition, .hero-scribble, .landing-grid',
+    {y:-24,autoAlpha:0,ease:'none'},.3);
+  window.addEventListener('resize',updatePinOffset);
+  return()=>{
+   window.removeEventListener('resize',updatePinOffset);
+   timeline.scrollTrigger?.kill();timeline.kill();
+   gsap.set([photo,'.landing-name, .landing-note, .landing-top, .landing-bottom, .paper-photo-note, .paper-edition, .hero-scribble, .landing-grid'],{clearProps:'transform,opacity,visibility'});
+   document.documentElement.classList.remove('hero-parallax-ready');
+   runway.style.removeProperty('--hero-sticky-top');
+   ScrollTrigger.refresh();
+  };
+ });
+})();
+
 // Keep the navigation readable everywhere and ease intentional section jumps.
 const header = document.querySelector('.header');
 let headerFrame = false;
